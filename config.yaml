@@ -1,0 +1,59 @@
+directory: /Users/kig/Music/Beetified
+library: /Users/kig/Music/Beetified/.beets-database.db
+replace:
+  '[\\/]': '-'
+  '^\.': '-'
+  '[\x00-\x1f]': '-'
+  '[<>"\?\*\|]': '-'
+  '\.$': ''
+  "'": ''
+  '\s+$': ''
+  '^\s+': ''
+  '\s+': '-'
+  '_': '-'
+  '--+': '-'
+import:
+  copy: yes
+  write: yes
+  log: /Users/kig/Music/Beetified/.beets-runtime.log
+threaded: yes
+art_filename: albumart
+asciify_paths: yes
+resume: ask
+ignore: .AppleDouble ._* *~ .DS_Store
+plugins:  [
+  inline,
+  bpm,
+  duplicates,
+  embedart,
+  fuzzy,
+  info,
+  missing,
+  permissions,
+]
+lyrics:
+  fallback: ''
+  google_API_key: AIzaSyDikF-zzDM1_N4KgfFZ_t4NDCtyJ_T6Ssw
+permissions:
+  file: 644
+  dir: 755
+paths:
+  default: "%lower{%ifdef{genre,%asciify{$genre},unknown}/$year/$albumartist/$album%aunique{}/$disk_and_track-$title}"
+  singleton: "%lower{tracks/%ifdef{genre,$genre,unknown}/$year/$label-$artist-$smart_bpm$title}"
+  compilations: "%lower{%ifdef{genre,%asciify{$genre},unknown}/%bucket{$year}/$album%aunique{}/$track-$title}"
+  albumtype:soundtrack: "%lower{soundtracks/$year/$album%aunique{}/$track-$title}"
+ui:
+  color: yes
+  colors:
+    text_success: green
+    text_warning: yellow
+    text_error: red
+    text_highlight: red
+    text_highlight_minor: lightgray
+    action_default: turquoise
+    action: blue
+item_fields:
+  smart_bpm: u'%03iBPM-' % bpm if bpm > 1 else '' 
+  multidisc: 1 if disctotal > 1 else 0
+  disc_and_track: u'%02i:%02i' % (disc, track) if
+                  disctotal > 1 else u'%02i' % (track)

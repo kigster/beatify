@@ -1,0 +1,105 @@
+= Beetified® — Music Management Project using Beets
+:title: "DJ BeetRoot® — Music Management Project using Beets"
+:source-highlighter: rouge
+:rouge-style: base16.monokai
+:safe: unsafe
+:allow-uri-read:
+:doctype: book
+:toc:
+:toclevels: 4
+:sectnums:
+:icons: font
+
+== Introduction 
+
+This project uses https://beets.readthedocs.io/en/stable/index.html[Beets] open source project to organize DJ music.
+
+Folders:
+
+ * `~/Music/DJ` is where your source music folder should be. This directory will only be read, and never written to.`
+ * `~/Music/Beetified` is where your music will be copied into, while being organized and renamed.
+
+Some shortcuts:
+
+ * https://beets.readthedocs.io/en/stable/reference/cli.html#[Beets CLI]
+ * https://beets.readthedocs.io/en/stable/reference/config.html[Beets Configuration]
+ * https://beets.readthedocs.io/en/stable/plugins/index.html[Beets Plugins]
+
+== USAGE
+
+=== Setup
+
+[source,bash]
+make init
+
+=== Run `beet` via Makefile
+
+[source,bash]
+make import
+
+=== Configuration
+
+Below is the current configuration that can be found in xref:config.yaml[config.yaml] file:
+
+[source,yaml]
+----
+directory: /Users/kig/Music/Beetified
+library: /Users/kig/Music/Beetified/.beets-database.db
+replace:
+  '[\\/]': '-'
+  '^\.': '-'
+  '[\x00-\x1f]': '-'
+  '[<>"\?\*\|]': '-'
+  '\.$': ''
+  "'": ''
+  '\s+$': ''
+  '^\s+': ''
+  '\s+': '-'
+  '_': '-'
+  '--+': '-'
+import:
+  copy: yes
+  write: yes
+  log: /Users/kig/Music/Beetified/.beets-runtime.log
+threaded: yes
+art_filename: albumart
+asciify_paths: yes
+resume: ask
+ignore: .AppleDouble ._* *~ .DS_Store
+plugins:  [
+  inline,
+  bpm,
+  duplicates,
+  embedart,
+  fuzzy,
+  info,
+  missing,
+  permissions,
+]
+lyrics:
+  fallback: ''
+  google_API_key: AIzaSyDikF-zzDM1_N4KgfFZ_t4NDCtyJ_T6Ssw
+permissions:
+  file: 644
+  dir: 755
+paths:
+  default: "%lower{%ifdef{genre,%asciify{$genre},unknown}/$year/$albumartist/$album%aunique{}/$disk_and_track-$title}"
+  singleton: "%lower{tracks/%ifdef{genre,$genre,unknown}/$year/$label-$artist-$smart_bpm$title}"
+  compilations: "%lower{%ifdef{genre,%asciify{$genre},unknown}/%bucket{$year}/$album%aunique{}/$track-$title}"
+  albumtype:soundtrack: "%lower{soundtracks/$year/$album%aunique{}/$track-$title}"
+ui:
+  color: yes
+  colors:
+    text_success: green
+    text_warning: yellow
+    text_error: red
+    text_highlight: red
+    text_highlight_minor: lightgray
+    action_default: turquoise
+    action: blue
+item_fields:
+  smart_bpm: u'%03iBPM-' % bpm if bpm > 1 else '' 
+  multidisc: 1 if disctotal > 1 else 0
+  disc_and_track: u'%02i:%02i' % (disc, track) if
+                  disctotal > 1 else u'%02i' % (track)
+----
