@@ -13,8 +13,9 @@
 }
 
 source "${BASHMATIC_HOME}/init.sh"
+
 export version='0.1.0'
-output.constrain-screen-width 100
+output.constrain-screen-width 120
 
 export beetified_project="$(dirname $(cd $(dirname "${BASH_SOURCE[0]:-${(%):-%x}}") || exit 1; pwd -P))"
 export beetified_config_erb="${beetified_project}/conf/config.yaml.erb"
@@ -49,7 +50,7 @@ beetify.usage() {
     " " "Default is ${bldylw}${target_music_path}" \
     "-c / --config CONFIG" "Specify an alternative configuration file." \
     " " "By default beetify will generate file ${bldylw}conf/config.yml" \
-    " " "which would be used to run ${bldgrn}beet.${clr}Howefer, you can also" \
+    " " "which would be used to run ${bldgrn}beet. ${txtylw}Howefer, you can also" \
     " " "just copy the auto-generated file somewhere, and modify it," \
     " " "and then use that file moving forwad to keep your library in sync." \
     " " " " \
@@ -63,20 +64,21 @@ beetify.usage() {
     "├Examples" " " \
     " " "${bldblk}# Reimports from ~/Music/Tracks and ~/Music/Beatport into ~/Music/Beetified" \
     " " "${bldblu}❯ bin/beetify -m ~/Music/Tracks -m ~/Music/Beatport -o ~/Music/Beetified" \
-    " " " " 
-    " " "${bldblk}# Dry run — only print the command the will run, although config.yaml" \
-    " " "${bldblk}# will be still regenerated. This can be used to create a starting point of your " \
-    " " "${bldblk}# config.yaml and then modify it later." \
-    " " "${bldblu}❯ bin/beetify -n -m ~/Music/Tracks -m ~/Music/Beatport -o ~/Music/Beetified"
+    " " " " \
+    " " "${bldblk}# Dry run — only print the command the will run" \
+    " " "${bldblu}❯ bin/beetify -n -m ~/Music/Tracks -m ~/Music/Beatport -o ~/Music/Beetified" \
+    " " " " \
+    " " "${bldblk}# Use custom config file for import:" \
+    " " "${bldblu}❯ bin/beetify -c ~/Music/beetify-conf.yaml -m ~/Music/Beatport"
 }
 
 beetify.header() {
-  action-header "Beetifier " "${bldylw}Organize Your Music like a Pro v${version}"
+  h2 "Beetifier " "${bldylw}Organize Your Music like a Pro v${version}"
 }
 
 beetify.parse-opts() {
   [[ -z "$1" ]] && {
-    usage
+    beetify.usage
     exit 0
   }
 
@@ -130,7 +132,7 @@ beetify.parse-opts() {
       ;;
     -h | -\? | --help)
       shift
-      usage
+      beetify.usage
       exit 0
       ;;
     --) # End of all options; anything after will be passed to the action function
@@ -149,24 +151,21 @@ beetify.parse-opts() {
     esac
   done
 
-  if [[ ${beetified_config} == "${beetified_config_default}" ]]; then
-    beetify.configure
-  fi
 }
 
 function beetify.configure() {
   # shellcheck disable=2046
   export beetified_log="${target_music_path}/.beets-runtime.log"
   export beetified_db="${target_music_path}/.beets-database.db"
-  info "Regenerating config file into ${bldpur}${beetified_config}..."
-  ruby -e "require 'erb'; puts ERB.new(File.read('${beetified_config_erb}')).result(binding)" > "${beetified_config}"
+  info "Regenerating config file into ${bldpur}${beetified_config_default}"
+  ruby -e "require 'erb'; puts ERB.new(File.read('${beetified_config_erb}')).result(binding)" > "${beetified_config_default}"
 }
 
 function beetify.init() {
   if [[ -d "${beets_path}" ]] ; then 
-    run "git clone https://github.com/beetbox/beets.git ${beets_path}"
-  else
     run "cd ${beets_path} && git pull origin master && cd ->/dev/null"
+  else
+    run "git clone https://github.com/beetbox/beets.git ${beets_path}"
   fi
 
   info "Installing beets into /usr/local/bin/beets"
@@ -184,40 +183,58 @@ function beetify.init() {
   [[ -d ${target_music_path} ]] || run "mkdir -p ${target_music_path}"
 }
 
-function beetify.run() {
-  local extra_flags
-  ((flag_force)) && extra_flags="--noincremental"
-
-  for dir in "${source_music_dirs[@]}"; do
-    hr
-    info "Importing from ${dir}..."
-    set -ex
-
-    beet --directory="${target_music_path}" \
+function beetify.exec() {
+  local extra_flags="$1"
+  beet --directory="${target_music_path}" \
       --config="${beetified_config}" \
+      --library="${beetified_db}" \
       import ${extra_flags} \
+      --log="${beetified_log}" \
       --noautotag \
       --from-scratch  \
-      --log="${beetified_log}" \
-      --library="${beetified_db}" \
       --copy \
       --resume \
       --singletons \
       --quiet \
       "${dir}"
-    local code=$?
-    set +ex
+}
+
+function beetify.run() {
+  local extra_flags
+  local code=0
+  ((flag_force)) && extra_flags="--noincremental"
+
+  if [[ -z ${source_music_dirs[*]} ]]; then
+    beetify.usage 
+
+    error "Please specify at least one music source folder with -m / --music-dir"
+    return 1
+  fi
+
+  for dir in "${source_music_dirs[@]}"; do
+    hr; echo
+    info "Importing from ${dir}..."
+    if [[ ${flag_verbose} -eq 1 ]] ; then
+      ok:
+      set -x
+      beetify.exec ${extra_flags}
+      local code=$?
+      set +x
+    else
+      run "beetify.exec ${extra_flags}"
+      code=${LibRun__LastExitCode}
+    fi
+      
     ((code)) && {
       error "beet exited with error code ${code}" "Check the log file ${beetified_log} for details."
       return ${code}
     }
   done
 
-  local dir_size
-  dir_size=$( cd "${target_music_path}"; du -hs . | tr -d ' '; cd ->/dev/null ) 
-  dir_size=$((dir_size / 1024 / 1024))
+  local -a dir_size
+  dir_size=($(du -hs "${target_music_path}"))
 
-  success "Destination folder ${target_music_path}'s size is now ${dir_size} MB"
+  success "Destination folder ${target_music_path}'s size is now ${dir_size[0]}"
 
   return 0
 }

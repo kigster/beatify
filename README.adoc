@@ -10,33 +10,64 @@
 :sectnums:
 :icons: font
 
+NOTE: This software is distributed under the  MIT License.
+
 == Introduction 
 
 This project uses https://beets.readthedocs.io/en/stable/index.html[Beets] open source project to organize DJ music.
 
-Folders:
-
- * `~/Music/DJ` is where your source music folder should be. This directory will only be read, and never written to.`
- * `~/Music/Beetified` is where your music will be copied into, while being organized and renamed.
-
+[NOTE]
+====
 Some shortcuts:
 
  * https://beets.readthedocs.io/en/stable/reference/cli.html#[Beets CLI]
  * https://beets.readthedocs.io/en/stable/reference/config.html[Beets Configuration]
  * https://beets.readthedocs.io/en/stable/plugins/index.html[Beets Plugins]
+====
+
+For example, let's say you have several folders full of DJ tracks:
+
+ * `~/Music/DJ/Beatport, ~/Music/DJ/Amazon, /Volumes/Apple Music` — are all giant collections where your music is stored. These directory are called "source folders", and they are never written to.
+
+
+The script provided here can copy files from any number of folders while applying an opinionated set of renaming and organizational rules. THe underlying software implementing the move is `beet`, but we provide out the box configuration and the shell wrapper for it.
+
+ * For instance, let's say you want to organize music from all of the above folders into a single directory under `~/Music/Beetified`.
+
+All you need to do, is to clone this repo, and then:
+
+[source,bash]
+----
+git clone git@github.com:kigster/beetified.git
+cd beetified
+bin/beetify \
+    -m '~/Music/DJ/Beatport' \
+    -m '~/Music/DJ/Amazon' \
+    -m '/Volumes/Apple Music' \
+    -o ~/Music/Beetified
+----
+
+And vola! The script will the rest.
 
 == USAGE
 
-=== Setup
+The script offers extensive help screen:
 
 [source,bash]
-make init
+bin/beetify --help
 
-=== Run `beet` via Makefile
+You should see the following:
 
-[source,bash]
-make import
+image::doc/img/beetify.png[Beetify,width=80%,align=center]
 
-=== Configuration
+=== An Example
 
-You can review the configuration for `beets` command in the xref:config.yaml[config.yaml] file.
+image::doc/img/using.png[Beetify in Action,width=80%,align=center]
+
+Whenever you run this command, an ERB file `conf/config.yaml.erb` is rendered
+as `conf/config.yaml` — you can copy this file elsewhere and then use it with the `-c / --config`
+arguments to the `bin/beetify` script.
+
+
+
+

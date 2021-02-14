@@ -1,6 +1,6 @@
 # vim: ft=yaml
 directory: <%= ENV['target_music_path'] %>
-library: <%= ENV['beetified_db'] %>/.beets-database.db
+library: <%= ENV['beetified_db'] %>
 replace:
   '[\\/]': '-'
   '^\.': '-'
@@ -17,7 +17,7 @@ replace:
 import:
   copy: yes
   write: yes
-  log: <%= ENV['beetified_log'] %>/.beets-runtime.log
+  log: <%= ENV['beetified_log'] %>
 threaded: yes
 art_filename: albumart
 asciify_paths: yes
