@@ -1,0 +1,50 @@
+# vim: ft=yaml
+directory: <%= ENV['target_music_path'] %>
+library: <%= ENV['beetified_db'] %>/.beets-database.db
+replace:
+  '[\\/]': '-'
+  '^\.': '-'
+  '[\x00-\x1f]': '-'
+  '[<>"\?\*\|]': '-'
+  '\.$': ''
+  "'": ''
+  '\s+$': ''
+  '^\s+': ''
+  '\s+': '-'
+  '_': '-'
+  '--+': '-'
+  '^-|-$': ''
+import:
+  copy: yes
+  write: yes
+  log: <%= ENV['beetified_log'] %>/.beets-runtime.log
+threaded: yes
+art_filename: albumart
+asciify_paths: yes
+resume: ask
+ignore: .AppleDouble ._* *~ .DS_Store
+plugins:  [
+  inline,
+  bpm,
+  duplicates,
+  embedart,
+  fuzzy,
+  info,
+  missing,
+  permissions,
+]
+permissions:
+  file: 644
+  dir: 755
+paths:
+  default: "%lower{%asciify{tracks/%ifdef{genre,$genre,unknown}/$year/$label:$album.$number.$title$beats}}"
+  singleton: "%lower{%asciify{tracks/%ifdef{genre,$genre,unknown}/$year/$label:$album.$number.$title$beats}}"
+  compilations: "%lower{%asciify{compilations/%ifdef{genre,$genre,unknown}/$year/$label/$album/$number.$title$beats}}"
+  albumtype:soundtrack: "%lower{%asciify{soundtracks/%ifdef{genre,$genre,unknown}/$year/$label/$album/$number.$title$beats}}"
+ui:
+  color: yes
+item_fields:
+  beats: u'-(%03ibpm)' % bpm if bpm > 1 else '' 
+  multidisc: 1 if disctotal > 1 else 0
+  number: u'%02i:%02i' % (disc, track) if
+                  disctotal > 1 else u'%02i' % (track)

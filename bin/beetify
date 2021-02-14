@@ -1,0 +1,233 @@
+#!/usr/bin/env bash 
+# vim: ft=bash
+
+# shellcheck disable=2046
+
+[[ -z ${BASHMATIC_HOME} ]] && export BASHMATIC_HOME="${HOME}/.bashmatic"
+[[ -d ${BASHMATIC_HOME} ]] || bash -c "$(curl -fsSL https://bashmatic.re1.re); bashmatic-install"
+[[ -d ${BASHMATIC_HOME} ]] || {
+  echo "Can't find Bashmatic, even after attempting an installation."
+  echo "Please install Bashmatic with the following command line:"
+  echo 'bash -c "$(curl -fsSL https://bashmatic.re1.re); bashmatic-install"'
+  exit 1
+}
+
+source "${BASHMATIC_HOME}/init.sh"
+export version='0.1.0'
+output.constrain-screen-width 100
+
+export beetified_project="$(dirname $(cd $(dirname "${BASH_SOURCE[0]:-${(%):-%x}}") || exit 1; pwd -P))"
+export beetified_config_erb="${beetified_project}/conf/config.yaml.erb"
+export beetified_config_default="${beetified_project}/conf/config.yaml"
+export beetified_config="${beetified_config_default}"
+
+export beets_path="${beetified_project}/.beets"
+
+declare -a source_music_dirs 
+export source_music_dirs=() 
+export target_music_path="${HOME}/Music/Beetified"
+
+export flag_verbose=0
+export flag_force=0
+export flag_dry_run=0
+export flag_on_error_abort=0
+
+beetify.option-requires-an-argument() {
+  local option="$1"
+  [[ -n "${option}" ]] && return
+
+  error "EROR: option ${option} requires an arguemnt, and none was detected"
+  exit 1
+}
+
+beetify.usage() {
+  usage-box "bin/beetify [ flags ] © Import and organize music with Beets" \
+    "├Flags" " " \
+    "-m / --music-dir DIR" "Source folders where your music currently is." \
+    " " "Can be used more than once." \
+    "-o / --output-dir DIR" "Output folder where the music is copied to." \
+    " " "Default is ${bldylw}${target_music_path}" \
+    "-c / --config CONFIG" "Specify an alternative configuration file." \
+    " " "By default beetify will generate file ${bldylw}conf/config.yml" \
+    " " "which would be used to run ${bldgrn}beet.${clr}Howefer, you can also" \
+    " " "just copy the auto-generated file somewhere, and modify it," \
+    " " "and then use that file moving forwad to keep your library in sync." \
+    " " " " \
+    "├Global flags:" "" \
+    "-v / --verbose" "Print extra debugging info" \
+    "-e / --exit-on-error" "Abort if an error occurs. Default is to keep going." \
+    "-f / --force" "Whipes any existing destination folder before importing." \
+    " "  "Essentially this means — 'reimport'." \
+    "-n / --dry-run" "Only print commands, but do not run them" \
+    " " " " \
+    "├Examples" " " \
+    " " "${bldblk}# Reimports from ~/Music/Tracks and ~/Music/Beatport into ~/Music/Beetified" \
+    " " "${bldblu}❯ bin/beetify -m ~/Music/Tracks -m ~/Music/Beatport -o ~/Music/Beetified" \
+    " " " " 
+    " " "${bldblk}# Dry run — only print the command the will run, although config.yaml" \
+    " " "${bldblk}# will be still regenerated. This can be used to create a starting point of your " \
+    " " "${bldblk}# config.yaml and then modify it later." \
+    " " "${bldblu}❯ bin/beetify -n -m ~/Music/Tracks -m ~/Music/Beatport -o ~/Music/Beetified"
+}
+
+beetify.header() {
+  action-header "Beetifier " "${bldylw}Organize Your Music like a Pro v${version}"
+}
+
+beetify.parse-opts() {
+  [[ -z "$1" ]] && {
+    usage
+    exit 0
+  }
+
+  # Parse additional flags
+  while :; do
+    case $1 in
+    -m | --music-dir)
+      shift
+      [[ -z $1 ]] && beetify.option-requires-an-argument "--music-dir"
+      [[ -d "$1" ]] || { 
+        error "Music directory $1 does not exist."
+        return 1
+      }
+      source_music_dirs+=("$1")
+      shift
+      ;;
+    -o | --output-dir)
+      shift
+      [[ -z $1 ]] && beetify.option-requires-an-argument "--output-dir"
+      export target_music_path="$1"
+      [[ -d "$1" ]] || mkdir -p "${target_music_path}"
+      shift
+      ;;
+    -c | --config)
+      shift
+      [[ -z $1 ]] && beetify.option-requires-an-argument "--config"
+      [[ -s "$1" ]] || { 
+        error "Config file ${1} does not exist."
+        return 1
+      }
+      export beetified_config="$1"
+      export beetified_config_erb= # no need for ERB at this point
+      shift
+      ;;
+    -n | --dry-run)
+      run.set-all dry-run-on
+      shift
+      ;;
+    -f | --force)
+      export flag_force=1
+      shift
+      ;;
+    -e | --exit-on-error)
+      run.set-all abort-on-error
+      export flag_on_error_abort=1
+      shift
+      ;;
+    -v | --verbose)
+      export flag_verbose=1
+      shift
+      ;;
+    -h | -\? | --help)
+      shift
+      usage
+      exit 0
+      ;;
+    --) # End of all options; anything after will be passed to the action function
+      shift
+      break
+      ;;
+    -?*)
+      printf 'WARN: Unknown option (ignored): %s\n' "$1" >&2
+      exit 127
+      shift
+      ;;
+    *)
+      [[ -z "$1" ]] && break
+      shift
+      ;;
+    esac
+  done
+
+  if [[ ${beetified_config} == "${beetified_config_default}" ]]; then
+    beetify.configure
+  fi
+}
+
+function beetify.configure() {
+  # shellcheck disable=2046
+  export beetified_log="${target_music_path}/.beets-runtime.log"
+  export beetified_db="${target_music_path}/.beets-database.db"
+  info "Regenerating config file into ${bldpur}${beetified_config}..."
+  ruby -e "require 'erb'; puts ERB.new(File.read('${beetified_config_erb}')).result(binding)" > "${beetified_config}"
+}
+
+function beetify.init() {
+  if [[ -d "${beets_path}" ]] ; then 
+    run "git clone https://github.com/beetbox/beets.git ${beets_path}"
+  else
+    run "cd ${beets_path} && git pull origin master && cd ->/dev/null"
+  fi
+
+  info "Installing beets into /usr/local/bin/beets"
+  ( 
+    cd "${beets_path}" || exit 11
+    run "python3 setup.py install"
+  )
+
+  [[ -d ${target_music_path} && flag_force -eq 0 ]] || {
+    info "NOTE: target music folder already exists, so we'll do incremental update."
+    info "To fully reimport, use --force / -f flag, which removes ${target_music_path} first."
+  }
+
+  ((flag_force)) && run "rm -rf ${target_music_path}"
+  [[ -d ${target_music_path} ]] || run "mkdir -p ${target_music_path}"
+}
+
+function beetify.run() {
+  local extra_flags
+  ((flag_force)) && extra_flags="--noincremental"
+
+  for dir in "${source_music_dirs[@]}"; do
+    hr
+    info "Importing from ${dir}..."
+    set -ex
+
+    beet --directory="${target_music_path}" \
+      --config="${beetified_config}" \
+      import ${extra_flags} \
+      --noautotag \
+      --from-scratch  \
+      --log="${beetified_log}" \
+      --library="${beetified_db}" \
+      --copy \
+      --resume \
+      --singletons \
+      --quiet \
+      "${dir}"
+    local code=$?
+    set +ex
+    ((code)) && {
+      error "beet exited with error code ${code}" "Check the log file ${beetified_log} for details."
+      return ${code}
+    }
+  done
+
+  local dir_size
+  dir_size=$( cd "${target_music_path}"; du -hs . | tr -d ' '; cd ->/dev/null ) 
+  dir_size=$((dir_size / 1024 / 1024))
+
+  success "Destination folder ${target_music_path}'s size is now ${dir_size} MB"
+
+  return 0
+}
+
+function beetify.main() {
+  beetify.header
+  beetify.parse-opts "$@"
+  beetify.configure
+  beetify.init
+  beetify.run
+}
+
+beetify.main "$@"

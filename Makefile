@@ -7,6 +7,7 @@ BEETIFIED_LOG:="$(BEETIFIED_MUSIC)/.beets-runtime.log"
 BEETIFIED_DB:="$(BEETIFIED_MUSIC)/.beets-database.db"
 
 BEETIFIED_HOME:=$(shell pwd -P)
+BEETIFIED_CONFIG_ERB:="$(BEETIFIED_HOME)/config.yaml.erb"
 BEETIFIED_CONFIG:="$(BEETIFIED_HOME)/config.yaml"
 
 MUSIC_SOURCES:="$(HOME)/Music/DJ"
@@ -20,10 +21,11 @@ init: ## Clone beets locally and run its installer
 	@bash -c 'cd beets && python3 setup.py install >/dev/null 2>&1'
 	@echo "Ensuring target music folder $(BEETIFIED_MUSIC) exists..."
 	@mkdir -p $(BEETIFIED_MUSIC)
+	@ruby -e "require 'erb'; puts ERB.new(File.read('$(BEETIFIED_CONFIG_ERB)')).result(binding)" > $(BEETIFIED_CONFIG)
 
 clean: ## Wipe out the folder organized by Beets $(BEETS)
 	@echo "Cleaning previous Beetified music folders..."
-	rm -rf $(BEETIFIED_MUSIC) 
+	rm -rf $(BEETIFIED_MUSIC)  $(BEETIFIED_CONFIG)
 
 wipe:
 	rm -rf $(BEETIFIED_HOME)/beets
@@ -118,3 +120,4 @@ reimport: clean import ## Clean previous import, and do it again.
 #   -S ID, --search-id=ID
 #                         restrict matching to a specific metadata backend ID
 #   --set=FIELD=VALUE     set the given fields to the supplied values
+
