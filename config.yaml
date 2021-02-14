@@ -12,6 +12,7 @@ replace:
   '\s+': '-'
   '_': '-'
   '--+': '-'
+  '^-': ''
 import:
   copy: yes
   write: yes
@@ -38,10 +39,10 @@ permissions:
   file: 644
   dir: 755
 paths:
-  default: "%lower{%ifdef{genre,%asciify{$genre},unknown}/$year/$albumartist/$album%aunique{}/$disk_and_track-$title}"
-  singleton: "%lower{tracks/%ifdef{genre,$genre,unknown}/$year/$label-$artist-$smart_bpm$title}"
-  compilations: "%lower{%ifdef{genre,%asciify{$genre},unknown}/%bucket{$year}/$album%aunique{}/$track-$title}"
-  albumtype:soundtrack: "%lower{soundtracks/$year/$album%aunique{}/$track-$title}"
+  default- "%lower{%asciify{%ifdef{genre,%asciify{$genre},unknown}/$year/$albumartist/$album%aunique{}/$number-$title}}"
+  singleton- "%lower{%asciify{tracks/%ifdef{genre,$genre,unknown}/$year/$label/$album-$number-$title$beats}}"
+  compilations- "%lower{%asciify{%ifdef{genre,%asciify{$genre},unknown}/$year/$album%aunique{}/$number-$label-$artist-$title}}"
+  albumtype-soundtrack- "%lower{%asciify{soundtracks/$year/$album%aunique{}/$track-$title}}"
 ui:
   color: yes
   colors:
@@ -49,11 +50,11 @@ ui:
     text_warning: yellow
     text_error: red
     text_highlight: red
-    text_highlight_minor: lightgray
+    text_highlight_minor: lightgray`
     action_default: turquoise
     action: blue
 item_fields:
-  smart_bpm: u'%03iBPM-' % bpm if bpm > 1 else '' 
+  beats: u'-%03iBPM' % bpm if bpm > 1 else '' 
   multidisc: 1 if disctotal > 1 else 0
-  disc_and_track: u'%02i:%02i' % (disc, track) if
+  number: u'%02i:%02i' % (disc, track) if
                   disctotal > 1 else u'%02i' % (track)

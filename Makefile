@@ -30,19 +30,23 @@ wipe:
 
 import: init ## Import Music Folders into ~/Music/Beets
 	@echo "Importing from $(MUSIC_SOURCES) to $(BEETIFIED_MUSIC)..."
-	beet 	--directory=$(BEETIFIED_MUSIC) \
-			--config=$(BEETIFIED_CONFIG) \
-				import \
-				--noautotag \
-				--from-scratch  \
-				--log=$(BEETIFIED_LOG) \
-				--copy \
-				--resume \
-				--singletons \
-				--noincremental \
-				--quiet \
-				$(MUSIC_SOURCES)
-				
+	beet --directory=$(BEETIFIED_MUSIC) \
+		--config=$(BEETIFIED_CONFIG) \
+		import \
+		--noautotag \
+		--from-scratch  \
+		--log=$(BEETIFIED_LOG) \
+		--copy \
+		--resume \
+		--singletons \
+		--noincremental \
+		--quiet \
+		$(MUSIC_SOURCES)
+
+
+reimport: clean import ## Clean previous import, and do it again.
+
+
 #————————————————————————————————————————————————————————————————
 # ❯ beet -h
 # Usage: 
