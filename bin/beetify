@@ -37,7 +37,7 @@ beetify.option-requires-an-argument() {
   local option="$1"
   [[ -n "${option}" ]] && return
 
-  error "EROR: option ${option} requires an arguemnt, and none was detected"
+  error "ERROR: option ${option} requires an arguemnt, and none was detected"
   exit 1
 }
 
@@ -50,16 +50,16 @@ beetify.usage() {
     " " "Default is ${bldylw}${target_music_path}" \
     "-c / --config CONFIG" "Specify an alternative configuration file." \
     " " "By default beetify will generate file ${bldylw}conf/config.yml" \
-    " " "which would be used to run ${bldgrn}beet. ${txtylw}Howefer, you can also" \
+    " " "which would be used to run ${bldgrn}beet. ${txtylw}However, you can also" \
     " " "just copy the auto-generated file somewhere, and modify it," \
-    " " "and then use that file moving forwad to keep your library in sync." \
+    " " "and then use that file moving forward to keep your library in sync." \
     " " " " \
     "├Global flags:" "" \
     "-v / --verbose" "Print extra debugging info" \
     "-e / --exit-on-error" "Abort if an error occurs. Default is to keep going." \
-    "-f / --force" "Whipes any existing destination folder before importing." \
+    "-f / --force" "Wipes any existing destination folder before importing." \
     " "  "Essentially this means — 'reimport'." \
-    "-n / --dry-run" "Only print commands, but do not run them" \
+    "-n / --dry-run" "Only print commands, but do not run them." \
     " " " " \
     "├Examples" " " \
     " " "${bldblk}# Reimports from ~/Music/Tracks and ~/Music/Beatport into ~/Music/Beetified" \
