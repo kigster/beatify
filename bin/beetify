@@ -168,10 +168,10 @@ function beetify.init() {
     run "git clone https://github.com/beetbox/beets.git ${beets_path}"
   fi
 
-  info "Installing beets into /usr/local/bin/beets"
+  info "Installing beets into /usr/local/bin/beet"
   ( 
     cd "${beets_path}" || exit 11
-    run "python3 setup.py install"
+    run "sudo python3 setup.py install"
   )
 
   [[ -d ${target_music_path} && flag_force -eq 0 ]] || {
